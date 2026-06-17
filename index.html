@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Tic Tac Toe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #000000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            color: #ffffff;
+        }
+
+        /* Status Text (Turn & Winner Message) */
+        .status-container {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .status {
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .x-turn {
+            color: #00F0FF; /* Neon Cyan */
+            text-shadow: 0 0 15px #00F0FF;
+        }
+
+        .o-turn {
+            color: #FF007F; /* Neon Pink */
+            text-shadow: 0 0 15px #FF007F;
+        }
+
+        /* Game Board Grid */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 90vw;
+            max-width: 380px;
+            aspect-ratio: 1;
+            background-color: #111111;
+            padding: 15px;
+            border-radius: 20px;
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.05);
+        }
+
+        /* Individual Box/Cell */
+        .cell {
+            background-color: #1A1A1A;
+            border: none;
+            border-radius: 12px;
+            font-size: 3.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        /* X and O Distinct Colors */
+        .cell.x {
+            color: #00F0FF;
+            text-shadow: 0 0 20px #00F0FF;
+        }
+
+        .cell.o {
+            color: #FF007F;
+            text-shadow: 0 0 20px #FF007F;
+        }
+
+        /* WINNING OPTION COLORFUL EFFECT */
+        .cell.winner {
+            background: linear-gradient(135deg, #00F0FF, #FF007F);
+            color: #ffffff !important;
+            text-shadow: 0 0 15px #ffffff;
+            animation: winPulse 0.5s infinite alternate;
+        }
+
+        @keyframes winPulse {
+            from {
+                transform: scale(1);
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+            to {
+                transform: scale(1.05);
+                box-shadow: 0 0 25px rgba(255, 255, 255, 0.8);
+            }
+        }
+
+        /* Reset/Restart Button */
+        .reset-btn {
+            margin-top: 40px;
+            padding: 12px 35px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: linear-gradient(45deg, #333333, #222222);
+            color: white;
+            border: 2px solid #444444;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .reset-btn:hover {
+            border-color: #00F0FF;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+
+        .reset-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="status-container">
+        <div class="status" id="statusText">PLAYER <span class="x-turn">X</span> TURN</div>
+    </div>
+
+    <div class="board" id="board">
+        <button class="cell" data-index="0"></button>
+        <button class="cell" data-index="1"></button>
+        <button class="cell" data-index="2"></button>
+        <button class="cell" data-index="3"></button>
+        <button class="cell" data-index="4"></button>
+        <button class="cell" data-index="5"></button>
+        <button class="cell" data-index="6"></button>
+        <button class="cell" data-index="7"></button>
+        <button class="cell" data-index="8"></button>
+    </div>
+
+    <button class="reset-btn" onclick="resetGame()">Restart Game</button>
+
+    <script>
+        const board = document.getElementById('board');
+        const cells = document.querySelectorAll('.cell');
+        const statusText = document.getElementById('statusText');
+        
+        let currentPlayer = 'X';
+        let gameState = ["", "", "", "", "", "", "", "", ""];
+        let isGameActive = true;
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+
+        function handleCellClick(e) {
+            const clickedCell = e.target;
+            const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+            if (gameState[clickedCellIndex] !== "" || !isGameActive) {
+                return;
+            }
+
+            gameState[clickedCellIndex] = currentPlayer;
+            clickedCell.innerText = currentPlayer;
+            clickedCell.classList.add(currentPlayer.toLowerCase());
+
+            checkResult();
+        }
+
+        function checkResult() {
+            let roundWon = false;
+            let winningLine = [];
+
+            for (let i = 0; i < winningConditions.length; i++) {
+                const winCondition = winningConditions[i];
+                let a = gameState[winCondition[0]];
+                let b = gameState[winCondition[1]];
+                let c = gameState[winCondition[2]];
+
+                if (a === '' || b === '' || c === '') {
+                    continue;
+                }
+                if (a === b && b === c) {
+                    roundWon = true;
+                    winningLine = winCondition;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                // Win Option Colors Magic
+                statusText.innerHTML = `🎉 PLAYER <span class="${currentPlayer.toLowerCase()}-turn">${currentPlayer}</span> WINS!`;
+                
+                // Winning boxes ko colorful gradient aur animation dena
+                winningLine.forEach(index => {
+                    cells[index].classList.add('winner');
+                });
+                
+                isGameActive = false;
+                return;
+            }
+
+            let roundDraw = !gameState.includes("");
+            if (roundDraw) {
+                statusText.innerHTML = `<span style="color: #FFCC00; text-shadow: 0 0 10px #FFCC00;">IT'S A DRAW! 🤝</span>`;
+                isGameActive = false;
+                return;
+            }
+
+            // Player badalna
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusText.innerHTML = `PLAYER <span class="${currentPlayer.toLowerCase()}-turn">${currentPlayer}</span> TURN`;
+        }
+
+        function resetGame() {
+            currentPlayer = 'X';
+            gameState = ["", "", "", "", "", "", "", "", ""];
+            isGameActive = true;
+            statusText.innerHTML = `PLAYER <span class="x-turn">X</span> TURN`;
+            
+            cells.forEach(cell => {
+                cell.innerText = "";
+                cell.className = "cell"; // Saari purani classes (x, o, winner) khatam
+            });
+        }
+    </script>
+</body>
+</html>
